@@ -109,7 +109,8 @@ KNOWN_DEAD_ARGS="GNOME_VERSION"
     fi
 }
 
-@test "BASE_IMAGE_SHA is not reintroduced without a consumer" {    # It existed as a frozen sha256 literal that nothing read, which made the
+@test "BASE_IMAGE_SHA is not reintroduced without a consumer" {
+    # It existed as a frozen sha256 literal that nothing read, which made the
     # CentOS base look digest-pinned when it is resolved by mutable tag.
     if grep -qw 'BASE_IMAGE_SHA' "${CONTAINERFILE}"; then
         run grep -rqw 'BASE_IMAGE_SHA' "${REPO_ROOT}/build_scripts" "${REPO_ROOT}/Justfile"
