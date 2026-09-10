@@ -25,6 +25,8 @@ name: Promote testing to main
 #   - daily 04:00 UTC — matches bluefin cadence
 
 on:
+  push:
+    branches: [testing]
   workflow_run:
     workflows: ["Post-Testing E2E", "Post-Testing E2E (nvidia)"]
     types: [completed]
