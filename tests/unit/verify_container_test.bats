@@ -11,7 +11,7 @@ JUSTFILE="${REPO_ROOT}/Justfile"
 @test "verify-container: build recipe invokes verify-container with keyless for common image" {
     run grep -A 8 'build \$target_image' "${JUSTFILE}"
     [ "$status" -eq 0 ]
-    grep -q 'verify-container "common:latest@\${common_image_sha}" ghcr.io/projectbluefin "keyless"' "${JUSTFILE}"
+    grep -q 'verify-container "\${common_image}@\${common_image_sha}" "" "keyless"' "${JUSTFILE}"
 }
 
 @test "verify-container: keyless branch explicitly checks key == keyless" {

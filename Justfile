@@ -123,7 +123,7 @@ build $target_image=image_name $tag=default_tag $dx="0" $nvidia="0" $kernel_pin=
     if [[ "${SKIP_BASE_VERIFY:-}" == "1" && "${CI:-}" != "true" ]]; then
         echo "WARNING: Skipping base image verification (SKIP_BASE_VERIFY=1, local dev only)"
     else
-        {{ just_executable() }} verify-container "common:latest@${common_image_sha}" ghcr.io/projectbluefin "keyless"
+        {{ just_executable() }} verify-container "${common_image}@${common_image_sha}" "" "keyless"
     fi
 
     BUILD_ARGS=()
@@ -577,19 +577,24 @@ verify-container container="" registry="ghcr.io/ublue-os" key="":
     RETRY_DELAY=10
     key="{{ key }}"
 
+    target_image="{{ container }}"
+    if [[ -n "{{ registry }}" ]]; then
+        target_image="{{ registry }}/{{ container }}"
+    fi
+
     # Keyless verification for images signed via Sigstore OIDC (e.g. projectbluefin/common)
     if [[ "${key}" == "keyless" ]]; then
-        CERT_IDENTITY_REGEXP="https://github.com/projectbluefin/(common|actions)/.github/workflows/"
+        CERT_IDENTITY_REGEXP="^https://github\\.com/projectbluefin/(common|actions)/\\.github/workflows/"
         CERT_OIDC_ISSUER="https://token.actions.githubusercontent.com"
         for attempt in $(seq 1 ${MAX_RETRIES}); do
             if "${COSIGN_BIN}" verify \
                 --certificate-identity-regexp="${CERT_IDENTITY_REGEXP}" \
                 --certificate-oidc-issuer="${CERT_OIDC_ISSUER}" \
-                "{{ registry }}"/"{{ container }}" >/dev/null; then
+                "${target_image}" >/dev/null; then
                 break
             fi
             if [[ "${attempt}" -eq "${MAX_RETRIES}" ]]; then
-                echo "ERROR: Keyless verification failed for {{ registry }}/{{ container }} after ${MAX_RETRIES} attempts." >&2
+                echo "ERROR: Keyless verification failed for ${target_image} after ${MAX_RETRIES} attempts." >&2
                 exit 1
             fi
             echo "NOTICE: Verification attempt ${attempt}/${MAX_RETRIES} failed, retrying in ${RETRY_DELAY}s..." >&2
@@ -598,15 +603,15 @@ verify-container container="" registry="ghcr.io/ublue-os" key="":
     else
         # Key-based verification
         if [[ -z "${key:-}" ]]; then
-            echo "ERROR: No public key specified for key-based verification of {{ registry }}/{{ container }}" >&2
+            echo "ERROR: No public key specified for key-based verification of ${target_image}" >&2
             exit 1
         fi
         for attempt in $(seq 1 ${MAX_RETRIES}); do
-            if "${COSIGN_BIN}" verify --key "${key}" "{{ registry }}"/"{{ container }}" >/dev/null; then
+            if "${COSIGN_BIN}" verify --key "${key}" "${target_image}" >/dev/null; then
                 break
             fi
             if [[ "${attempt}" -eq "${MAX_RETRIES}" ]]; then
-                echo "ERROR: Verification failed for {{ registry }}/{{ container }} after ${MAX_RETRIES} attempts. Please ensure your public key is correct." >&2
+                echo "ERROR: Verification failed for ${target_image} after ${MAX_RETRIES} attempts. Please ensure your public key is correct." >&2
                 exit 1
             fi
             echo "NOTICE: Verification attempt ${attempt}/${MAX_RETRIES} failed, retrying in ${RETRY_DELAY}s..." >&2
